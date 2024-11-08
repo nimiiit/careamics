@@ -37,8 +37,14 @@ def test_onnx_export(tmp_path, algorithm, architecture, conv_dim, n2v2, loss, sh
     model = FCNModule(algo_config)
     # set model to evaluation mode to avoid batch dimension error
     model.model.eval()
-    #create a sample input of BC(Z)XY
+    # create a sample input of BC(Z)XY
     x = torch.rand((1, 1, *shape))
+
+    # create dynamic axes from the shape of the x
+    dynamic_axes = {"input": {}, "output": {}}
+    for i in range(len(x.shape)):
+        dynamic_axes["input"][i] = f"dim_{i}"
+        dynamic_axes["output"][i] = f"dim_{i}"
 
     torch.onnx.export(
         model,
@@ -46,10 +52,7 @@ def test_onnx_export(tmp_path, algorithm, architecture, conv_dim, n2v2, loss, sh
         f"{tmp_path}/test_model.onnx",
         input_names=["input"],  # the model's input names
         output_names=["output"],  # the model's output names
-        dynamic_axes={
-            "input": {0: "batch_size"},
-            "output": {0: "batch_size"},
-        },  # variable length axes,
+        dynamic_axes=dynamic_axes,  # variable length axes,
     )
 
     checker.check_model(f"{tmp_path}/test_model.onnx")
